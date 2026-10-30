@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+.env
+*.sqlite3
+media/
+models/
+Ultralytics/
+runs/
+*.pt
+*.log
+secret.key
+report.json

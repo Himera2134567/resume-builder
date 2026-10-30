@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1 style="margin-top:0;">Создать резюме</h1>
+  <div class="card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="two-columns">
+        <div style="flex:1;">
+          <div class="inline-form" style="gap:12px; display:flex; flex-wrap:wrap;">
+            <div style="flex:1; min-width:120px;">
+              <label>Фамилия</label>{{ form.surname }}
+            </div>
+            <div style="flex:1; min-width:120px;">
+              <label>Имя</label>{{ form.name }}
+            </div>
+            <div style="flex:1; min-width:120px;">
+              <label>Отчество</label>{{ form.patronymic }}
+            </div>
+          </div>
+          <div style="margin-top:8px; max-width:280px;">
+            <label>Дата рождения</label>{{ form.birth_date }}
+          </div>
+        </div>
+        <div style="width:200px;">
+          <label>Фото</label>
+          <div class="photo-box" id="photo-preview">
+            {% if form.instance.photo %}
+              <img src="{{ form.instance.photo.url }}" class="photo-preview" alt="Фото">
+            {% else %}
+              <div class="small">Будет обрезано в квадрат</div>
+            {% endif %}
+          </div>
+          <div style="margin-top:6px;">{{ form.photo }}</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="skill-switcher">
+            <button type="button" class="tab-btn active" data-target="soft">Soft skills</button>
+            <button type="button" class="tab-btn" data-target="hard">Hard skills</button>
+          </div>
+          <button type="button" id="help-describe" class="btn" style="padding:6px 14px; font-size:0.85rem;">
+            Помочь описать
+          </button>
+          <span id="ai-status" class="small" style="display:none;">Генерирую…</span>
+        </div>
+
+        <div id="soft" class="tab-panel" style="margin-top:8px;">
+          <label>Soft skills</label>{{ form.soft_skills }}
+          <div class="small">Напиши через запятую и нажми «Помочь описать».</div>
+        </div>
+        <div id="hard" class="tab-panel" style="display:none; margin-top:8px;">
+          <label>Hard skills</label>{{ form.hard_skills }}
+          <div class="small">Например: Python, C++, Docker.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <button class="btn" name="update_resume" type="submit">Создать резюме</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // табы
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.dataset.target;
+      document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
+      document.getElementById(target).style.display='block';
+    });
+  });
+
+  // подсос к ИИ
+  const statusEl = document.getElementById('ai-status');
+  document.getElementById('help-describe').addEventListener('click', async ()=>{
+    const active = document.querySelector('.tab-btn.active').dataset.target;
+    const textarea = document.querySelector(
+      active === 'soft' ? 'textarea[name=soft_skills]' : 'textarea[name=hard_skills]'
+    );
+    const raw = (textarea.value || '').trim();
+    if (!raw) { alert('Напиши хотя бы пару навыков через запятую.'); return; }
+    try {
+      statusEl.style.display = 'inline';
+      const resp = await fetch(`/ai-describe/?skills=${encodeURIComponent(raw)}`);
+      const data = await resp.json();
+      if (data.summary) {
+        textarea.value = data.summary;
+      } else {
+        alert('Не удалось получить описание от ИИ.');
+      }
+    } catch (e) {
+      alert('Ошибка обращения к ИИ.');
+    } finally {
+      statusEl.style.display = 'none';
+    }
+  });
+
+  // превью фото
+  const photoInput = document.querySelector('input[name=photo]');
+  if (photoInput) {
+    photoInput.addEventListener('change', e=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const img = document.createElement('img');
+      img.className = 'photo-preview';
+      img.src = URL.createObjectURL(file);
+      const box = document.getElementById('photo-preview');
+      box.innerHTML = '';
+      box.appendChild(img);
+    });
+  }
+</script>
+{% endblock %}

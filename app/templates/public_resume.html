@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Профиль — {{ resume.full_name|default:"Резюме" }}{% endblock %}
+
+{% block content %}
+<h1 class="h1">{{ resume.full_name|default:"Резюме" }}</h1>
+
+<section class="card grid two">
+  <div>
+    <div class="grid three">
+      {% if resume.desired_role %}<div><label>Желаемая роль</label><div>{{ resume.desired_role }}</div></div>{% endif %}
+      {% if resume.location %}<div><label>Локация</label><div>{{ resume.location }}</div></div>{% endif %}
+      {% if resume.birth_date %}<div><label>Дата рождения</label><div>{{ resume.birth_date|date:"d.m.Y" }}</div></div>{% endif %}
+    </div>
+
+    {% if resume.about %}
+      <div class="mt-12"><label>О себе</label><div>{{ resume.about|linebreaksbr }}</div></div>
+    {% endif %}
+
+    <div class="mt-12 grid three">
+      {% if resume.email %}<div><label>Email</label><div>{{ resume.email }}</div></div>{% endif %}
+      {% if resume.phone %}<div><label>Телефон</label><div>{{ resume.phone }}</div></div>{% endif %}
+      {% if resume.telegram %}<div><label>Telegram</label><div>{{ resume.telegram }}</div></div>{% endif %}
+      {% if resume.github %}<div><label>GitHub</label><div><a href="{{ resume.github }}" target="_blank">{{ resume.github }}</a></div></div>{% endif %}
+      {% if resume.website %}<div><label>Сайт</label><div><a href="{{ resume.website }}" target="_blank">{{ resume.website }}</a></div></div>{% endif %}
+      {% if resume.languages %}<div><label>Языки</label><div>{{ resume.languages|linebreaksbr }}</div></div>{% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="photo">
+      {% if resume.photo %}<img src="{{ resume.photo.url }}" alt="Фото">{% else %}
+      <span class="muted">Фото не загружено</span>{% endif %}
+    </div>
+  </div>
+</section>
+
+{% if resume.soft_skills or resume.hard_skills %}
+<section class="card grid two">
+  {% if resume.soft_skills %}
+    <div><label>Soft skills</label><div>{{ resume.soft_skills|linebreaksbr }}</div></div>
+  {% endif %}
+  {% if resume.hard_skills %}
+    <div><label>Hard skills</label><div>{{ resume.hard_skills|linebreaksbr }}</div></div>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2 class="h2">Образование</h2>
+  <div class="list">
+    {% for ed in resume.education.all %}
+      <div class="item">
+        <div class="item-title"><strong>{{ ed.institution }}</strong></div>
+        <div class="muted">{{ ed.start_year }} — {{ ed.end_year }}</div>
+        <div>
+          {% if ed.degree %}{{ ed.degree }}{% endif %}{% if ed.field %}{% if ed.degree %}, {% endif %}{{ ed.field }}{% endif %}
+        </div>
+        {% if ed.description %}<div class="mt-6">{{ ed.description }}</div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Нет записей.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Проекты</h2>
+  <div class="list">
+    {% for p in resume.projects.all %}
+      <div class="item">
+        <div class="item-title"><strong>{{ p.title }}</strong> <span class="muted">{{ p.created_at|date:"d.m.Y" }}</span></div>
+        <div>{{ p.description }}</div>
+        {% if p.external_link %}<div class="muted">Ссылка: <a href="{{ p.external_link }}" target="_blank">{{ p.external_link }}</a></div>{% endif %}
+        {% if p.file %}<div class="muted">Файл: <a href="{{ p.file.url }}" download>{{ p.file.name|truncatechars:40 }}</a></div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Проекты не добавлены.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Достижения / мероприятия / гранты</h2>
+  <div class="list">
+    {% for e in resume.events.all %}
+      <div class="item">
+        <div class="item-title"><strong>{{ e.name }}</strong> {% if e.role %}<span class="muted">({{ e.role }})</span>{% endif %}</div>
+        <div class="muted">{{ e.date }}</div>
+        <div>{{ e.description }}</div>
+      </div>
+    {% empty %}<div class="item muted">Нет записей.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Опыт работы</h2>
+  <div class="list">
+    {% for ex in resume.experiences.all %}
+      <div class="item">
+        <div class="item-title"><strong>{{ ex.position }}</strong> в {{ ex.company }}</div>
+        <div class="muted">{{ ex.start_date }} — {{ ex.end_date }}</div>
+        <div>{{ ex.description }}</div>
+        {% if ex.attachment %}<div class="muted">Файл: <a href="{{ ex.attachment.url }}" download>{{ ex.attachment.name|truncatechars:40 }}</a></div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Опыт не указан.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}

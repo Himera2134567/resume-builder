@@ -1,0 +1,610 @@
+{% extends "base.html" %}
+{% block title %}Конструктор резюме — Summarizee{% endblock %}
+
+{% block content %}
+<h1 class="h1">Резюме</h1>
+
+<!-- Личные данные / Контакты / О себе / Скиллы / Предпочтения -->
+<section id="profile" class="card">
+  <style>
+    /* --- ШАПКА ПРОФИЛЯ --- */
+    .resume-header{
+      display:grid;
+      grid-template-columns: 1fr 320px; /* левая колонка тянется, правая фикс. */
+      gap:24px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .resume-header{ grid-template-columns: 1fr; }
+    }
+    .photo-card{
+      position: sticky;
+      top: 12px; /* прилипает к верху карточки */
+    }
+    .photo-box{
+      width:100%;
+      aspect-ratio: 1/1;
+      border:1px solid var(--border, #e8e8ec);
+      border-radius:12px;
+      overflow:hidden;
+      background:var(--paper, #f6f6fa);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .photo-box img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .photo-hint{
+      color:#8a8a98;
+      font-size:.9rem;
+    }
+    .right-col{ align-self:start; }
+    .resume-header .grid.three > div label{ margin-bottom: 6px; display:block; }
+
+    /* --- Контакты: 6 строк по центру --- */
+    .contacts-centered{
+      max-width: 640px;           /* расширено относительно правой колонки */
+      margin: 16px auto 0;        /* по центру */
+    }
+    .contacts-centered .row{ margin-top: 12px; }
+    .contacts-centered label{ display:block; margin-bottom:6px; }
+    .contacts-centered input[type="text"],
+    .contacts-centered input[type="url"],
+    .contacts-centered input[type="email"]{
+      width:100%;
+    }
+  </style>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="form_kind" value="resume">
+    <input type="hidden" name="next" value="/builder/#profile">
+
+    <!-- ШАПКА -->
+    <div class="resume-header">
+      <!-- левая колонка: основные поля -->
+      <div class="grid three">
+        <div><label>Фамилия</label><input type="text" name="surname" value="{{ resume.surname }}"></div>
+        <div><label>Имя</label><input type="text" name="name" value="{{ resume.name }}"></div>
+        <div><label>Отчество</label><input type="text" name="patronymic" value="{{ resume.patronymic }}"></div>
+
+        <div><label>Дата рождения</label><input type="date" name="birth_date" value="{{ resume.birth_date|date:'Y-m-d' }}"></div>
+        <div><label>Место жительства</label><input type="text" name="location" value="{{ resume.location }}"></div>
+        <div><label>Желаемая роль</label><input type="text" name="desired_role" value="{{ resume.desired_role }}"></div>
+
+        <div><label>Гражданство</label><input type="text" name="citizenship" value="{{ resume.citizenship }}"></div>
+        <div><label>Желаемая зарплата</label><input type="text" name="desired_salary" placeholder="например 80 000 ₽" value="{{ resume.desired_salary }}"></div>
+
+        <div>
+          <label>Формат работы</label>
+          <select name="work_format">
+            <option value="">—</option>
+            <option {% if resume.work_format == 'Очный' %}selected{% endif %}>Очный</option>
+            <option {% if resume.work_format == 'Дистанционный' %}selected{% endif %}>Дистанционный</option>
+            <option {% if resume.work_format == 'Гибрид' %}selected{% endif %}>Гибрид</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Тип занятости</label>
+          <select name="employment_type">
+            <option value="">—</option>
+            <option {% if resume.employment_type == 'Полная' %}selected{% endif %}>Полная</option>
+            <option {% if resume.employment_type == 'Частичная' %}selected{% endif %}>Частичная</option>
+            <option {% if resume.employment_type == 'Стажировка' %}selected{% endif %}>Стажировка</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Семейное положение</label>
+          <select name="marital_status">
+            <option value="">—</option>
+            <option {% if resume.marital_status == 'Не указано' %}selected{% endif %}>Не указано</option>
+            <option {% if resume.marital_status == 'Не женат/Не замужем' %}selected{% endif %}>Не женат/Не замужем</option>
+            <option {% if resume.marital_status == 'Женат/Замужем' %}selected{% endif %}>Женат/Замужем</option>
+            <option {% if resume.marital_status == 'В отношениях' %}selected{% endif %}>В отношениях</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="muted">Готов к переезду</label>
+          <div style="display:flex;gap:14px;align-items:center">
+            <label><input type="checkbox" name="relocate_yes" id="relocate_yes" {% if resume.relocate_yes %}checked{% endif %}> Да</label>
+            <label><input type="checkbox" name="relocate_no"  id="relocate_no"  {% if resume.relocate_no %}checked{% endif %}> Нет</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- правая колонка: только фото -->
+      <aside class="right-col photo-card">
+        <label>Фото</label>
+        <div class="photo-box" id="photo-preview">
+          {% if resume.photo %}
+            <img src="{{ resume.photo.url }}" alt="Фото">
+          {% else %}
+            <span class="photo-hint">Будет обрезано в квадрат</span>
+          {% endif %}
+        </div>
+        <div class="mt-8">
+          <input type="file" name="photo" accept="image/*">
+        </div>
+      </aside>
+    </div>
+    <!-- /ШАПКА -->
+
+    <!-- Контакты: 6 строк по центру (Git удалён) -->
+    <div class="contacts-centered">
+      <div class="row"><label>Телефон</label><input type="text" name="phone" value="{{ resume.phone }}"></div>
+      <div class="row"><label>Email</label><input type="email" name="email" value="{{ resume.email }}"></div>
+      <div class="row"><label>Telegram</label><input type="text" name="telegram" value="{{ resume.telegram }}" placeholder="@nickname"></div>
+      <div class="row"><label>GitHub</label><input type="url" name="github" value="{{ resume.github }}"></div>
+      <div class="row"><label>Stepik</label><input type="url" name="stepik" value="{{ resume.stepik }}" placeholder="https://stepik.org/users/..."></div>
+      <div class="row"><label>Leader ID</label><input type="text" name="leader_id" value="{{ resume.leader_id }}"></div>
+    </div>
+
+    <!-- Водительские права -->
+    <div class="mt-12">
+      <label>Водительские права (категории)</label>
+      <div class="muted">Поставь нужные галочки</div>
+      <div class="grid three">
+        <label><input type="checkbox" name="drivers_A"  value="A"  {% if resume.drivers_A %}checked{% endif %}> A</label>
+        <label><input type="checkbox" name="drivers_B"  value="B"  {% if resume.drivers_B %}checked{% endif %}> B</label>
+        <label><input type="checkbox" name="drivers_BE" value="BE" {% if resume.drivers_BE %}checked{% endif %}> BE</label>
+        <label><input type="checkbox" name="drivers_C"  value="C"  {% if resume.drivers_C %}checked{% endif %}> C</label>
+        <label><input type="checkbox" name="drivers_CE" value="CE" {% if resume.drivers_CE %}checked{% endif %}> CE</label>
+        <label><input type="checkbox" name="drivers_D"  value="D"  {% if resume.drivers_D %}checked{% endif %}> D</label>
+        <label><input type="checkbox" name="drivers_DE" value="DE" {% if resume.drivers_DE %}checked{% endif %}> DE</label>
+        <label><input type="checkbox" name="drivers_M"  value="M"  {% if resume.drivers_M %}checked{% endif %}> M</label>
+        <label><input type="checkbox" name="drivers_TB" value="ТБ" {% if resume.drivers_TB %}checked{% endif %}> ТБ</label>
+        <label><input type="checkbox" name="drivers_TM" value="ТМ" {% if resume.drivers_TM %}checked{% endif %}> ТМ</label>
+      </div>
+    </div>
+
+    <div class="mt-12"><label>О себе</label><textarea name="about" rows="3" placeholder="2–3 предложения: сильные стороны, цели.">{{ resume.about }}</textarea></div>
+
+    <div class="tabs mt-12">
+      <button type="button" class="tab active" data-target="soft">Soft skills</button>
+      <button type="button" class="tab" data-target="hard">Hard skills</button>
+      <button type="button" id="ai-help" class="btn secondary">Помочь описать</button>
+    </div>
+
+    <div id="soft" class="tabpane mt-12">
+      <label>Soft skills</label>
+      <textarea name="soft_skills" rows="4" placeholder="Коммуникация, наставничество, тайм-менеджмент…">{{ resume.soft_skills }}</textarea>
+    </div>
+    <div id="hard" class="tabpane mt-12 hidden">
+      <label>Hard skills</label>
+      <textarea name="hard_skills" rows="4" placeholder="Python, C++, Docker, SQL, Django, React…">{{ resume.hard_skills }}</textarea>
+    </div>
+
+    <div class="mt-6"><label>Языки</label><textarea name="languages" rows="2" placeholder="Русский — родной, English — B2…">{{ resume.languages }}</textarea></div>
+
+    <div class="progress mt-12" id="ai-progress" hidden>
+      <div class="progress__bar" id="ai-bar"></div>
+    </div>
+    <div id="ai-status" class="muted mt-6"></div>
+
+    <div class="mt-12">
+      <button class="btn" type="submit">Сохранить раздел</button>
+    </div>
+  </form>
+</section>
+
+<!-- КУРСЫ / СЕРТИФИКАТЫ -->
+<section id="courses" class="card">
+  <h2 class="h2">Курсы / сертификаты</h2>
+  <div class="grid two">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="course_add">
+      <input type="hidden" name="next" value="/builder/#courses">
+
+      <div><label>Название</label><input type="text" name="course_title" placeholder="Основы машинного обучения"></div>
+
+      <div class="grid two mt-8">
+        <div><label>Платформа / организатор</label><input type="text" name="course_platform" placeholder="Stepik, Coursera, университет…"></div>
+        <div><label>Дата / год</label><input type="text" name="course_date" placeholder="мм.гггг / 2025"></div>
+      </div>
+
+      <div class="grid two mt-8">
+        <div><label>Номер сертификата</label><input type="text" name="course_cert_number" placeholder="ID/номер"></div>
+        <div><label>Ссылка</label><input type="url" name="course_link" placeholder="https://…"></div>
+      </div>
+
+      <div class="mt-8"><label>Файл сертификата</label><input type="file" name="course_file" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+
+      <button class="btn mt-12" type="submit">Добавить курс</button>
+    </form>
+
+    <div class="list" style="padding:12px">
+      {% for c in resume.courses.all %}
+        <div class="item">
+          <div><b>{{ c.title }}</b> <span class="muted">{{ c.date }}</span></div>
+          {% if c.platform %}<div class="muted">Платформа: {{ c.platform }}</div>{% endif %}
+          {% if c.cert_number %}<div class="muted">Сертификат: {{ c.cert_number }}</div>{% endif %}
+          {% if c.link %}<div>Ссылка: <a href="{{ c.link }}" target="_blank">{{ c.link }}</a></div>{% endif %}
+          {% if c.file %}<div class="muted">Файл: <a href="{{ c.file.url }}" download>{{ c.file.name|truncatechars:60 }}</a></div>{% endif %}
+        </div>
+      {% empty %}
+        <div class="muted">Курсов пока нет.</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Проекты -->
+<section id="projects" class="card">
+  <h2 class="h2">Проекты</h2>
+  <div class="grid two">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="project_add">
+      <input type="hidden" name="next" value="/builder/#projects">
+      <div class="mt-8"><label>Название</label><input type="text" name="title"></div>
+      <div class="mt-8"><label>Описание</label><textarea name="description" rows="3"></textarea></div>
+      <div class="grid two mt-8">
+        <div><label>Ссылка</label><input type="url" name="external_link"></div>
+        <div><label>Файл</label><input type="file" name="file"></div>
+      </div>
+      <button class="btn mt-12" type="submit">Добавить проект</button>
+    </form>
+
+    <div class="list">
+      {% for p, pf in pr_edit_forms %}
+      <div class="item" id="project-{{ p.id }}">
+        <div class="actions">
+          <form method="post" onsubmit="return confirm('Удалить проект?')">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="project_delete">
+            <input type="hidden" name="project_id" value="{{ p.id }}">
+            <input type="hidden" name="next" value="/builder/#projects">
+            <button class="btn sm secondary" type="submit">Удалить</button>
+          </form>
+          <button class="btn sm" type="button" onclick="toggleEdit('pr{{ p.id }}')">Редактировать</button>
+        </div>
+
+        <div><strong>{{ p.title }}</strong></div>
+        <div class="muted">{{ p.created_at|date:"d.m.Y" }}</div>
+        {% if p.description %}<div><span class="muted">Описание:</span> {{ p.description }}</div>{% endif %}
+        {% if p.external_link %}<div class="muted">Ссылка: <a href="{{ p.external_link }}" target="_blank">{{ p.external_link }}</a></div>{% endif %}
+        {% if p.file %}<div class="muted">Файл: <a href="{{ p.file.url }}" download>{{ p.file.name|truncatechars:40 }}</a></div>{% endif %}
+
+        <div id="pr{{ p.id }}" class="mt-8 hidden">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="project_edit">
+            <input type="hidden" name="project_id" value="{{ p.id }}">
+            <input type="hidden" name="next" value="/builder/#projects">
+            <div class="mt-6"><label>Название</label>{{ pf.title }}</div>
+            <div class="mt-6"><label>Описание</label>{{ pf.description }}</div>
+            <div class="grid two mt-6">
+              <div><label>Ссылка</label>{{ pf.external_link }}</div>
+              <div><label>Файл</label>{{ pf.file }}</div>
+            </div>
+            <button class="btn sm mt-8" type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}<div class="item muted">Ещё нет проектов.</div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Достижения / мероприятия / награды / гранты / научные статьи -->
+<section id="events" class="card">
+  <h2 class="h2">Достижения / мероприятия / награды / гранты / научные статьи</h2>
+  <div class="grid two">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="event_add">
+      <input type="hidden" name="next" value="/builder/#events">
+      <div><label>Название</label><input type="text" name="name"></div>
+      <div class="grid two mt-8">
+        <div><label>Роль / статус</label><input type="text" name="role"></div>
+        <div><label>Дата</label><input type="text" name="date" placeholder="мм.гггг / 2025"></div>
+      </div>
+      <div class="mt-8"><label>Описание</label><textarea name="description" rows="3"></textarea></div>
+      <div class="mt-8"><label>Ссылки (Drive / DOI и др.)</label><textarea name="links" rows="2" placeholder="https://…  https://…"></textarea></div>
+      <button class="btn mt-12" type="submit">Добавить запись</button>
+    </form>
+
+    <div class="list">
+      {% for e, ef in ev_edit_forms %}
+      <div class="item">
+        <div class="actions">
+          <form method="post" onsubmit="return confirm('Удалить запись?')">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="event_delete">
+            <input type="hidden" name="event_id" value="{{ e.id }}">
+            <input type="hidden" name="next" value="/builder/#events">
+            <button class="btn sm secondary" type="submit">Удалить</button>
+          </form>
+          <button class="btn sm" type="button" onclick="toggleEdit('ev{{ e.id }}')">Редактировать</button>
+        </div>
+
+        <div><strong>{{ e.name }}</strong>{% if e.role %} <span class="muted">({{ e.role }})</span>{% endif %}</div>
+        {% if e.date %}<div class="muted">Дата: {{ e.date }}</div>{% endif %}
+        {% if e.description %}<div><span class="muted">Описание:</span> {{ e.description }}</div>{% endif %}
+        {% if e.links %}<div class="muted">Ссылки: {{ e.links }}</div>{% endif %}
+
+        <div id="ev{{ e.id }}" class="mt-8 hidden">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="event_edit">
+            <input type="hidden" name="event_id" value="{{ e.id }}">
+            <input type="hidden" name="next" value="/builder/#events">
+            <div><label>Название</label>{{ ef.name }}</div>
+            <div class="grid two mt-6">
+              <div><label>Роль / статус</label>{{ ef.role }}</div>
+              <div><label>Дата</label>{{ ef.date }}</div>
+            </div>
+            <div class="mt-6"><label>Описание</label>{{ ef.description }}</div>
+            <div class="mt-6"><label>Ссылки</label>{{ ef.links }}</div>
+            <button class="btn sm mt-8" type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}<div class="item muted">Пока пусто.</div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Опыт работы -->
+<section id="experience" class="card">
+  <h2 class="h2">Опыт работы</h2>
+  <div class="grid two">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="experience_add">
+      <input type="hidden" name="next" value="/builder/#experience">
+      <div class="grid two">
+        <div><label>Компания</label><input type="text" name="company"></div>
+        <div><label>Должность</label><input type="text" name="position"></div>
+      </div>
+      <div class="grid two mt-8">
+        <div><label>Начало</label><input type="text" name="start_date"></div>
+        <div><label>Окончание</label><input type="text" name="end_date"></div>
+      </div>
+      <div class="mt-8"><label>Описание</label><textarea name="description" rows="4"></textarea></div>
+      <div class="mt-8"><label>Вложение</label><input type="file" name="attachment"></div>
+      <button class="btn mt-12" type="submit">Добавить опыт</button>
+    </form>
+
+    <div class="list">
+      {% for x, xf in exp_edit_forms %}
+      <div class="item">
+        <div class="actions">
+          <form method="post" onsubmit="return confirm('Удалить опыт?')">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="experience_delete">
+            <input type="hidden" name="experience_id" value="{{ x.id }}">
+            <input type="hidden" name="next" value="/builder/#experience">
+            <button class="btn sm secondary" type="submit">Удалить</button>
+          </form>
+          <button class="btn sm" type="button" onclick="toggleEdit('ex{{ x.id }}')">Редактировать</button>
+        </div>
+
+        <div><strong>{{ x.position }}</strong> в {{ x.company }}</div>
+        <div class="muted">{{ x.start_date }} — {{ x.end_date }}</div>
+        {% if x.description %}<div><span class="muted">Описание:</span> {{ x.description }}</div>{% endif %}
+        {% if x.attachment %}<div class="muted">Файл: <a href="{{ x.attachment.url }}" download>{{ x.attachment.name|truncatechars:40 }}</a></div>{% endif %}
+
+        <div id="ex{{ x.id }}" class="mt-8 hidden">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="experience_edit">
+            <input type="hidden" name="experience_id" value="{{ x.id }}">
+            <input type="hidden" name="next" value="/builder/#experience">
+            <div class="grid two">
+              <div><label>Компания</label>{{ xf.company }}</div>
+              <div><label>Должность</label>{{ xf.position }}</div>
+            </div>
+            <div class="grid two mt-6">
+              <div><label>Начало</label>{{ xf.start_date }}</div>
+              <div><label>Окончание</label>{{ xf.end_date }}</div>
+            </div>
+            <div class="mt-6"><label>Описание</label>{{ xf.description }}</div>
+            <div class="mt-6"><label>Вложение</label>{{ xf.attachment }}</div>
+            <button class="btn sm mt-8" type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}<div class="item muted">Опыт ещё не добавлен.</div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Образование -->
+<section id="education" class="card">
+  <h2 class="h2">Образование</h2>
+  <div class="grid two">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="education_add">
+      <input type="hidden" name="next" value="/builder/#education">
+      <div><label>Учебное заведение</label><input type="text" name="institution"></div>
+      <div class="grid two mt-8">
+        <div><label>Степень / программа</label><input type="text" name="degree"></div>
+        <div><label>Специальность</label><input type="text" name="field"></div>
+      </div>
+      <div class="grid two mt-8">
+        <div><label>Год начала</label><input type="text" name="start_year"></div>
+        <div><label>Год окончания</label><input type="text" name="end_year"></div>
+      </div>
+      <div class="mt-8"><label>Курсы, диплом, достижения</label><textarea name="description" rows="3"></textarea></div>
+      <button class="btn mt-12" type="submit">Добавить образование</button>
+    </form>
+
+    <div class="list">
+      {% for ed, edf in edu_edit_forms %}
+      <div class="item">
+        <div class="actions">
+          <form method="post" onsubmit="return confirm('Удалить запись об образовании?')">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="education_delete">
+            <input type="hidden" name="education_id" value="{{ ed.id }}">
+            <input type="hidden" name="next" value="/builder/#education">
+            <button class="btn sm secondary" type="submit">Удалить</button>
+          </form>
+          <button class="btn sm" type="button" onclick="toggleEdit('ed{{ ed.id }}')">Редактировать</button>
+        </div>
+
+        <div><strong>{{ ed.institution }}</strong></div>
+        <div class="muted">Годы обучения: {{ ed.start_year }} — {{ ed.end_year }}</div>
+        <div>
+          {% if ed.degree %}<span class="muted">Программа:</span> {{ ed.degree }} {% endif %}
+          {% if ed.field %}<span class="muted"> | Специальность:</span> {{ ed.field }}{% endif %}
+        </div>
+        {% if ed.description %}<div class="mt-6"><span class="muted">Достижения:</span> {{ ed.description }}</div>{% endif %}
+
+        <div id="ed{{ ed.id }}" class="mt-8 hidden">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_kind" value="education_edit">
+            <input type="hidden" name="education_id" value="{{ ed.id }}">
+            <input type="hidden" name="next" value="/builder/#education">
+            <div><label>Учебное заведение</label>{{ edf.institution }}</div>
+            <div class="grid two mt-6">
+              <div><label>Степень / программа</label>{{ edf.degree }}</div>
+              <div><label>Специальность</label>{{ edf.field }}</div>
+            </div>
+            <div class="grid two mt-6">
+              <div><label>Год начала</label>{{ edf.start_year }}</div>
+              <div><label>Год окончания</label>{{ edf.end_year }}</div>
+            </div>
+            <div class="mt-6"><label>Курсы, диплом, достижения</label>{{ edf.description }}</div>
+            <button class="btn sm mt-8" type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}<div class="item muted">Пока нет записей об образовании.</div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Публикация и ссылки -->
+<section id="publish" class="card">
+  {% if resume.is_published %}
+    <div class="grid two">
+      <div class="copy">
+        <input id="public-link" value="{{ public_url_full }}" readonly>
+        <button class="btn secondary" type="button" onclick="copyVal('#public-link')">Скопировать публичную</button>
+      </div>
+      <div class="copy">
+        <input id="pdf-link" value="{{ pdf_url_full }}" readonly>
+        <a class="btn" href="{{ pdf_url_full }}">Скачать PDF</a>
+      </div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="unpublish">
+      <input type="hidden" name="next" value="/builder/#publish">
+      <button class="btn" type="submit">Снять с публикации</button>
+    </form>
+  {% else %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form_kind" value="publish">
+      <input type="hidden" name="next" value="/builder/#publish">
+      <p class="muted">Проверь данные и нажми «Опубликовать», чтобы получить публичную ссылку и PDF.</p>
+      <button class="btn" type="submit">Опубликовать резюме</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // табы
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.target;
+      document.querySelectorAll('.tabpane').forEach(p=>p.classList.add('hidden'));
+      document.getElementById(t).classList.remove('hidden');
+    });
+  });
+
+  // превью фото
+  (function(){
+    const input = document.querySelector('input[type=file][name=photo]');
+    if(!input) return;
+    input.addEventListener('change', e=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      const box = document.getElementById('photo-preview');
+      box.innerHTML = ''; box.appendChild(img);
+    });
+  })();
+
+  // «Готов к переезду» — взаимоисключающие чекбоксы
+  (function(){
+    const yes = document.getElementById('relocate_yes');
+    const no  = document.getElementById('relocate_no');
+    if(yes && no){
+      yes.addEventListener('change',()=>{ if(yes.checked) no.checked=false; });
+      no .addEventListener('change',()=>{ if(no.checked)  yes.checked=false; });
+    }
+  })();
+
+  // показать/скрыть блоки редактирования
+  function toggleEdit(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.toggle('hidden');
+    if(!el.classList.contains('hidden')){
+      el.scrollIntoView({block:'start'});
+    }
+  }
+
+  // копирование
+  function copyVal(sel){
+    const el=document.querySelector(sel);
+    if(!el) return;
+    navigator.clipboard.writeText(el.value);
+  }
+
+  // ИИ генерация + прогресс
+  const aiBtn = document.getElementById('ai-help');
+  const bar  = document.getElementById('ai-bar');
+  const wrap = document.getElementById('ai-progress');
+  const stat = document.getElementById('ai-status');
+
+  aiBtn?.addEventListener('click', async ()=>{
+    const active = document.querySelector('.tab.active').dataset.target;
+    const ta = document.querySelector(active==='soft' ? 'textarea[name=soft_skills]' : 'textarea[name=hard_skills]');
+    const raw = (ta.value||'').trim();
+    if(!raw){ alert('Напиши навыки через запятую.'); return; }
+
+    aiBtn.disabled = true;
+    wrap.hidden = false; stat.textContent = 'Генерация…';
+    let p = 6; bar.style.width = p+'%';
+    const tick = setInterval(()=>{ p = Math.min(p+5, 92); bar.style.width = p+'%'; }, 140);
+
+    try{
+      const r = await fetch(`/ai-describe/?skills=${encodeURIComponent(raw)}`);
+      const data = await r.json();
+      if(data.summary){ ta.value = data.summary; stat.textContent = 'Готово'; bar.style.width = '100%'; }
+      else { stat.textContent = 'Не удалось получить описание.'; wrap.hidden=true; }
+    }catch(e){ stat.textContent = 'Ошибка сети.'; wrap.hidden=true; }
+    finally{
+      clearInterval(tick);
+      setTimeout(()=>{ wrap.hidden=true; bar.style.width='0'; stat.textContent=''; aiBtn.disabled=false; }, 900);
+    }
+  });
+
+  // прокрутка к якорю после перезагрузки
+  window.addEventListener('load', ()=>{
+    if(location.hash){
+      const t = document.querySelector(location.hash);
+      if(t) t.scrollIntoView({block:'start'});
+    }
+  });
+</script>
+{% endblock %}

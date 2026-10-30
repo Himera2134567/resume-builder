@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1 class="h1">Резюме</h1>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  <!-- Шапка + фото -->
+  <section class="card grid two">
+    <div>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:12px">
+        <div>
+          <label>Фамилия</label>
+          {{ form.surname|add_class:"input" }}
+        </div>
+        <div>
+          <label>Имя</label>
+          {{ form.name|add_class:"input" }}
+        </div>
+        <div>
+          <label>Отчество</label>
+          {{ form.patronymic|add_class:"input" }}
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+        <div>
+          <label>Дата рождения</label>
+          {{ form.birth_date|add_class:"input" }}
+        </div>
+        <div>
+          <label>Место жительства</label>
+          {{ form.location|add_class:"input" }}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label>Фото</label>
+      <div class="photo" id="photoBox">
+        {% if resume.photo %}
+          <img src="{{ resume.photo.url }}" alt="Фото">
+        {% else %}
+          <span class="muted">Будет обрезано в квадрат</span>
+        {% endif %}
+      </div>
+      <div style="margin-top:8px">{{ form.photo }}</div>
+    </div>
+  </section>
+
+  <!-- Скиллы + ИИ -->
+  <section class="card">
+    <div class="tabs">
+      <button class="tab active" data-target="soft">Soft skills</button>
+      <button class="tab" data-target="hard">Hard skills</button>
+      <button class="btn secondary" id="aiGo" type="button">Сформулировать</button>
+    </div>
+
+    <div id="soft" class="tabpane" style="margin-top:12px">
+      <label>Soft skills</label>
+      {{ form.soft_skills|add_class:"input" }}
+      <div class="muted">Напиши через запятую, например: коммуникация, работа в команде…</div>
+    </div>
+
+    <div id="hard" class="tabpane" style="display:none;margin-top:12px">
+      <label>Hard skills</label>
+      {{ form.hard_skills|add_class:"input" }}
+      <div class="muted">Например: Python, C++, Docker, SQL…</div>
+    </div>
+
+    <div class="progress" style="margin-top:14px">
+      <div class="progress__bar" id="aiBar"></div>
+    </div>
+    <div id="aiStatus" class="muted" style="margin-top:6px"></div>
+  </section>
+
+  <!-- Проекты -->
+  <section class="card">
+    <h2 class="h2">Проекты</h2>
+    <div class="grid two">
+      <div>
+        <div><label>Название</label>{{ project_form.title|add_class:"input" }}</div>
+        <div><label>Описание</label>{{ project_form.description|add_class:"input" }}</div>
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div><label>Ссылка</label>{{ project_form.external_link|add_class:"input" }}</div>
+          <div><label>Файл</label>{{ project_form.file }}</div>
+        </div>
+        <button class="btn" name="add_project" value="1" type="submit" style="margin-top:10px">Добавить проект</button>
+      </div>
+      <div>
+        <div class="list">
+          {% for p in resume.projects.all %}
+            <div class="item">
+              <div class="item-title"><strong>{{ p.title }}</strong></div>
+              <div class="muted">{{ p.created_at|date:"d.m.Y" }}</div>
+              <div>{{ p.description }}</div>
+              {% if p.external_link %}<div class="muted">Ссылка: <a href="{{ p.external_link }}" target="_blank">{{ p.external_link }}</a></div>{% endif %}
+              {% if p.file %}<div class="muted">Файл: <a href="{{ p.file.url }}" download>{{ p.file.name|truncatechars:40 }}</a></div>{% endif %}
+            </div>
+          {% empty %}<div class="item muted">Ещё нет проектов.</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Достижения -->
+  <section class="card">
+    <h2 class="h2">Достижения / мероприятия</h2>
+    <div class="grid two">
+      <div>
+        <div><label>Название</label>{{ event_form.name|add_class:"input" }}</div>
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div><label>Роль</label>{{ event_form.role|add_class:"input" }}</div>
+          <div><label>Дата</label>{{ event_form.date|add_class:"input" }}</div>
+        </div>
+        <div><label>Описание</label>{{ event_form.description|add_class:"input" }}</div>
+        <button class="btn" name="add_event" value="1" type="submit" style="margin-top:10px">Добавить достижение</button>
+      </div>
+      <div>
+        <div class="list">
+          {% for e in resume.events.all %}
+            <div class="item">
+              <div class="item-title"><strong>{{ e.name }}</strong> {% if e.role %}<span class="muted">({{ e.role }})</span>{% endif %}</div>
+              <div class="muted">{{ e.date }}</div>
+              <div>{{ e.description }}</div>
+            </div>
+          {% empty %}<div class="item muted">Пока пусто.</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Опыт работы -->
+  <section class="card">
+    <h2 class="h2">Опыт работы</h2>
+    <div class="grid two">
+      <div>
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div><label>Компания</label>{{ experience_form.company|add_class:"input" }}</div>
+          <div><label>Должность</label>{{ experience_form.position|add_class:"input" }}</div>
+        </div>
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div><label>Начало</label>{{ experience_form.start_date|add_class:"input" }}</div>
+          <div><label>Окончание</label>{{ experience_form.end_date|add_class:"input" }}</div>
+        </div>
+        <div><label>Описание</label>{{ experience_form.description|add_class:"input" }}</div>
+        <div><label>Вложение</label>{{ experience_form.attachment }}</div>
+        <button class="btn" name="add_experience" value="1" type="submit" style="margin-top:10px">Добавить опыт</button>
+      </div>
+      <div>
+        <div class="list">
+          {% for ex in resume.experiences.all %}
+            <div class="item">
+              <div class="item-title"><strong>{{ ex.position }}</strong> в {{ ex.company }}</div>
+              <div class="muted">{{ ex.start_date }} — {{ ex.end_date }}</div>
+              <div>{{ ex.description }}</div>
+              {% if ex.attachment %}<div class="muted">Файл: <a href="{{ ex.attachment.url }}" download>{{ ex.attachment.name|truncatechars:40 }}</a></div>{% endif %}
+            </div>
+          {% empty %}<div class="item muted">Опыт ещё не добавлен.</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Сохранение + ссылки -->
+  <section class="card">
+    <button class="btn" name="update_resume" type="submit">Сохранить резюме</button>
+
+    <div class="grid" style="grid-template-columns:1.6fr .6fr;gap:12px;margin-top:12px">
+      <div class="copy">
+        <input id="publicLink" class="input" value="{{ public_url_full }}" readonly>
+        <button class="btn secondary" type="button" onclick="copyVal('#publicLink')">Копировать публичную</button>
+      </div>
+      <button class="btn ghost" type="button" onclick="copyText('{{ edit_url_full }}')">Редактировать</button>
+    </div>
+    <div class="muted" style="margin-top:6px">Кнопка «Редактировать» скопирует приватную ссылку в буфер.</div>
+  </section>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // helper: добавить класс к виджету (simple shim)
+  NodeList.prototype.forEach||(NodeList.prototype.forEach=Array.prototype.forEach);
+  HTMLInputElement.prototype.add_class = function(){this.classList.add('input'); return this}
+</script>
+<script>
+  // табы
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.target;
+      document.querySelectorAll('.tabpane').forEach(p=>p.style.display='none');
+      document.getElementById(t).style.display='block';
+    });
+  });
+
+  // превью фото
+  (function(){
+    const inp = document.querySelector('input[type=file][name=photo]');
+    if(!inp) return;
+    inp.addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return;
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      const box = document.getElementById('photoBox');
+      box.innerHTML = ''; box.appendChild(img);
+    });
+  })();
+
+  // копирование
+  function copyVal(sel){ const el=document.querySelector(sel); if(!el) return; navigator.clipboard.writeText(el.value); }
+  function copyText(txt){ navigator.clipboard.writeText(txt); }
+
+  // AI + прогресс
+  const aiBtn = document.getElementById('aiGo');
+  const aiBar = document.getElementById('aiBar');
+  const aiStatus = document.getElementById('aiStatus');
+
+  aiBtn?.addEventListener('click', async ()=>{
+    const activeTab = document.querySelector('.tab.active').dataset.target;
+    const ta = document.querySelector(activeTab === 'soft' ? 'textarea[name=soft_skills]' : 'textarea[name=hard_skills]');
+    const raw = (ta.value||'').trim();
+    if(!raw){ alert('Напиши навыки через запятую.'); return; }
+
+    aiBtn.disabled = true;
+    aiStatus.textContent = 'Генерация…';
+    let p=5; aiBar.style.width = p+'%';
+    const tick = setInterval(()=>{ p=Math.min(p+5,90); aiBar.style.width=p+'%'; }, 180);
+
+    try{
+      const resp = await fetch(`/ai/describe/?skills=${encodeURIComponent(raw)}`);
+      const data = await resp.json();
+      if(data.summary){ ta.value = data.summary; }
+      p=100; aiBar.style.width='100%'; aiStatus.textContent='Готово.';
+    }catch(e){
+      aiStatus.textContent='Ошибка при обращении к ИИ.';
+      aiBar.style.width='0';
+    }finally{
+      clearInterval(tick);
+      setTimeout(()=>{ aiBar.style.width='0'; aiStatus.textContent=''; }, 1200);
+      aiBtn.disabled = false;
+    }
+  });
+</script>
+{% endblock %}

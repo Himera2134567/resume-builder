@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Резюме — {{ resume.full_name|default:"Без имени" }}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="grid two">
+    <div>
+      <h1 class="h1">{{ resume.full_name|default:"Без имени" }}</h1>
+      {% if resume.desired_role %}<div class="muted">{{ resume.desired_role }}</div>{% endif %}
+      <div class="muted mt-6">
+        {% if resume.location %}{{ resume.location }}{% endif %}
+        {% if resume.birth_date %} • {{ resume.birth_date|date:"d.m.Y" }}{% endif %}
+        {% if resume.citizenship %} • {{ resume.citizenship }}{% endif %}
+      </div>
+
+      <div class="mt-12 grid three">
+        {% if resume.email %}<div><label>Email</label><div>{{ resume.email }}</div></div>{% endif %}
+        {% if resume.phone %}<div><label>Телефон</label><div>{{ resume.phone }}</div></div>{% endif %}
+        {% if resume.telegram %}<div><label>Telegram</label><div>{{ resume.telegram }}</div></div>{% endif %}
+        {% if resume.github %}<div><label>GitHub</label><div><a href="{{ resume.github }}" target="_blank">{{ resume.github }}</a></div></div>{% endif %}
+        {% if resume.website %}<div><label>Веб-сайт</label><div><a href="{{ resume.website }}" target="_blank">{{ resume.website }}</a></div></div>{% endif %}
+        {% if resume.stepik %}<div><label>Stepik</label><div><a href="{{ resume.stepik }}" target="_blank">{{ resume.stepik }}</a></div></div>{% endif %}
+        {% if resume.leader_id %}<div><label>Leader ID</label><div>{{ resume.leader_id }}</div></div>{% endif %}
+        {% if resume.languages %}<div><label>Языки</label><div>{{ resume.languages }}</div></div>{% endif %}
+      </div>
+
+      <div class="mt-12 grid three">
+        {% if resume.desired_salary %}<div><label>Желаемая зарплата</label><div>{{ resume.desired_salary }}</div></div>{% endif %}
+        {% if resume.employment_type %}<div><label>Тип занятости</label><div>
+          {% for v, t in resume._meta.get_field('employment_type').choices %}
+            {% if resume.employment_type == v %}{{ t }}{% endif %}
+          {% endfor %}
+        </div></div>{% endif %}
+        {% if resume.work_format %}<div><label>Формат работы</label><div>
+          {% for v, t in resume._meta.get_field('work_format').choices %}
+            {% if resume.work_format == v %}{{ t }}{% endif %}
+          {% endfor %}
+        </div></div>{% endif %}
+        {% if resume.marital_status %}
+          <div><label>Семейное положение</label><div>
+            {% for v, t in resume._meta.get_field('marital_status').choices %}
+              {% if resume.marital_status == v %}{{ t }}{% endif %}
+            {% endfor %}
+          </div></div>
+        {% endif %}
+        {% if resume.can_relocate %}<div><label>Переезд</label><div>Готов к переезду</div></div>{% endif %}
+        {% if resume.drivers_license %}
+          <div><label>Права</label><div>{{ resume.drivers_license }}</div></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div>
+      <div class="photo">
+        {% if resume.photo %}<img src="{{ resume.photo.url }}" alt="Фото">{% else %}<span class="muted">Фото отсутствует</span>{% endif %}
+      </div>
+      <div class="mt-12">
+        <a class="btn" href="{{ resume.get_pdf_url }}">Скачать PDF</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if resume.about %}
+<section class="card">
+  <h2 class="h2">О себе</h2>
+  <div>{{ resume.about|linebreaksbr }}</div>
+</section>
+{% endif %}
+
+{% if resume.soft_skills or resume.hard_skills %}
+<section class="card">
+  <h2 class="h2">Навыки</h2>
+  {% if resume.soft_skills %}<div class="mt-6"><b>Soft:</b> {{ resume.soft_skills }}</div>{% endif %}
+  {% if resume.hard_skills %}<div class="mt-6"><b>Hard:</b> {{ resume.hard_skills }}</div>{% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2 class="h2">Опыт работы</h2>
+  <div class="list">
+    {% for ex in resume.experiences.all %}
+      <div class="item">
+        <div><strong>{{ ex.position|default:"—" }}</strong> в {{ ex.company|default:"—" }}</div>
+        <div class="muted">{{ ex.start_date|default:"—" }} — {{ ex.end_date|default:"—" }}</div>
+        {% if ex.description %}<div class="mt-6">{{ ex.description|linebreaksbr }}</div>{% endif %}
+        {% if ex.attachment %}<div class="mt-6 muted">Файл: <a href="{{ ex.attachment.url }}" download>{{ ex.attachment.name|truncatechars:60 }}</a></div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Нет записей.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Проекты</h2>
+  <div class="list">
+    {% for p in resume.projects.all %}
+      <div class="item">
+        <div><strong>{{ p.title|default:"—" }}</strong> <span class="muted">{{ p.created_at|date:"d.m.Y" }}</span></div>
+        {% if p.description %}<div class="mt-6">{{ p.description|linebreaksbr }}</div>{% endif %}
+        {% if p.external_link %}<div class="mt-6">Ссылка: <a href="{{ p.external_link }}" target="_blank">{{ p.external_link }}</a></div>{% endif %}
+        {% if p.file %}<div class="mt-6 muted">Файл: <a href="{{ p.file.url }}" download>{{ p.file.name|truncatechars:60 }}</a></div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Нет проектов.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Курсы / сертификаты</h2>
+  <div class="list">
+    {% for c in resume.courses_list.all %}
+      <div class="item">
+        <div><strong>{{ c.title }}</strong> <span class="muted">{{ c.provider }}</span></div>
+        <div class="muted">{{ c.issue_date }}{% if c.credential_id %} • № {{ c.credential_id }}{% endif %}</div>
+        {% if c.link %}<div>Ссылка: <a href="{{ c.link }}" target="_blank">{{ c.link }}</a></div>{% endif %}
+        {% if c.file %}<div class="muted">Файл: <a href="{{ c.file.url }}" download>{{ c.file.name|truncatechars:60 }}</a></div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Курсов пока нет.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Образование</h2>
+  <div class="list">
+    {% for ed in resume.education.all %}
+      <div class="item">
+        <div><strong>{{ ed.institution|default:"—" }}</strong></div>
+        <div class="muted">{{ ed.start_year|default:"—" }} — {{ ed.end_year|default:"—" }}</div>
+        <div class="mt-6">
+          {% if ed.degree %}<span class="muted">Программа:</span> {{ ed.degree }}{% endif %}
+          {% if ed.degree and ed.field %}<span class="muted"> • </span>{% endif %}
+          {% if ed.field %}<span class="muted">Специальность:</span> {{ ed.field }}{% endif %}
+        </div>
+        {% if ed.description %}<div class="mt-6">{{ ed.description|linebreaksbr }}</div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Нет записей.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Достижения / мероприятия / награды / гранты / статьи</h2>
+  <div class="list">
+    {% for e in resume.events.all %}
+      <div class="item">
+        <div><strong>{{ e.name|default:"—" }}</strong>{% if e.role %} <span class="muted">({{ e.role }})</span>{% endif %}</div>
+        {% if e.date %}<div class="muted">{{ e.date }}</div>{% endif %}
+        {% if e.description %}<div class="mt-6">{{ e.description|linebreaksbr }}</div>{% endif %}
+        {% if e.links %}<div class="mt-6">Ссылки: {{ e.links|linebreaksbr }}</div>{% endif %}
+        {% if e.attachment %}<div class="mt-6 muted">Файл: <a href="{{ e.attachment.url }}" download>{{ e.attachment.name|truncatechars:60 }}</a></div>{% endif %}
+        {% if e.video_url %}<div class="mt-6">Видео: <a href="{{ e.video_url }}" target="_blank">{{ e.video_url }}</a></div>{% endif %}
+      </div>
+    {% empty %}<div class="item muted">Нет записей.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
